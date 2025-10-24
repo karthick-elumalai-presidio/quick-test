@@ -1,0 +1,33 @@
+node_modules/
+.expo/
+dist/
+npm-debug.*
+*.jks
+*.p8
+*.p12
+*.key
+*.mobileprovision
+*.orig.*
+web-build/
+# expo router
+expo-env.d.ts
+
+.env
+*.log
+coverage/
+.vscode/
+.hai
+.hai.config
+.hai/
+
+/ios
+/android
+
+# macOS
+.DS_Store
+
+# Temporary files created by Metro to check the health of the file watcher
+.metro-health-check*
+
+.env
+.env.local

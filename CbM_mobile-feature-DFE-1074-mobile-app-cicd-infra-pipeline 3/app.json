@@ -1,0 +1,40 @@
+{
+  "expo": {
+    "name": "CbM_mobile_app",
+    "slug": "CbM_mobile_app",
+    "version": "1.0.0",
+    "scheme": "CbM_mobile_app",
+    "platforms": ["ios", "android"],
+    "plugins": ["expo-router", "expo-localization"],
+    "experiments": {
+      "typedRoutes": true,
+      "tsconfigPaths": true
+    },
+    "orientation": "portrait",
+    "icon": "./assets/tdk-ios-icon.png",
+    "userInterfaceStyle": "automatic",
+    "splash": {
+      "image": "./assets/tdk-blue.png",
+      "resizeMode": "contain",
+      "backgroundColor": "#EFF6FF",
+      "dark": {
+        "image": "./assets/tdk-white.png",
+        "resizeMode": "contain",
+        "backgroundColor": "#0046AD"
+      }
+    },
+    "assetBundlePatterns": ["**/*"],
+    "ios": {
+      "supportsTablet": true,
+      "bundleIdentifier": "com.tdksensei.edgerx",
+      "icon": "./assets/tdk-ios-icon.png"
+    },
+    "android": {
+      "adaptiveIcon": {
+        "foregroundImage": "./assets/tdk-android-foreground.png",
+        "backgroundColor": "#ffffff"
+      },
+      "package": "com.tdksensei.edgerx"
+    }
+  }
+}

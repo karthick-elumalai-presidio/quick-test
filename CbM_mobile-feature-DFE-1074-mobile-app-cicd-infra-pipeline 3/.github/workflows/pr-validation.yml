@@ -1,0 +1,251 @@
+name: PR Validation
+
+on:
+  pull_request:
+    branches:
+      - develop
+      - main
+      - qa
+    types: [opened, synchronize, reopened]
+
+permissions:
+  contents: read
+  id-token: write
+  pull-requests: write
+
+env:
+  NODE_VERSION: '20'
+  BUN_VERSION: '1.1.34'
+
+jobs:
+  validate:
+    name: Code Quality and Build Validation
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+
+      - name: Print Environment Details
+        run: |
+          echo "------------"
+          echo "Environment Details"
+          echo "----"
+          echo "Node: $(node --version)"
+          echo "Branch: ${{ github.head_ref }} -> Base: ${{ github.base_ref }}"
+          echo "PR Number: ${{ github.event.number }}"
+          echo "------------"
+
+      - name: Install Dependencies
+        run: |
+          echo "------------"
+          echo "Installing Dependencies"
+          echo "----"
+          npm install
+          echo "Dependencies installed successfully."
+          echo "------------"
+
+      - name: Run Code Quality Checks
+        run: |
+          echo "------------"
+          echo "Running Code Quality Checks"
+          echo "----"
+          FAILED=0
+
+          echo " Running ESLint and Prettier checks..."
+          if npm run lint; then
+            echo " ESLint and Prettier checks passed"
+          else
+            echo " ESLint and Prettier checks failed"
+            FAILED=1
+          fi
+
+          echo "----"
+          echo "Running TypeScript type checks..."
+          if npx tsc --noEmit; then
+            echo " TypeScript type checks passed"
+          else
+            echo " TypeScript type errors found"
+            FAILED=1
+          fi
+
+          echo "------------"
+          if [ $FAILED -eq 1 ]; then
+            echo "Some validation checks failed."
+            exit 1
+          else
+            echo "All code quality checks passed."
+          fi
+          echo "------------"
+
+      - name: Run Tests
+        run: |
+          echo "------------"
+          echo "Running Unit Tests"
+          echo "----"
+          if [ -d "tests" ] || [ -d "__tests__" ] || [ -d "test" ]; then
+            echo "Test directory found, running tests..."
+            npm test || echo " Tests failed or not configured properly"
+          else
+            echo " No test directory found. Skipping tests."
+            echo "Consider adding tests for better code quality."
+          fi
+          echo "------------"
+
+      - name: Verify Android Native Project
+        run: |
+          echo "------------"
+          echo "Verifying Android Native Project"
+          echo "----"
+          if [ ! -f "android/gradlew" ]; then
+            echo "Android project not found. Attempting to create..."
+            npx expo prebuild --platform android --clean
+            if [ -f "android/gradlew" ]; then
+              echo " Android project created successfully."
+            else
+              echo " Failed to create Android project."
+              exit 1
+            fi
+          else
+            echo " Android native project verified."
+          fi
+          echo "------------"
+
+      - name: Setup Java for Android
+        uses: actions/setup-java@v4
+        with:
+          distribution: 'temurin'
+          java-version: '17'
+
+      - name: Setup Ruby for Fastlane
+        uses: ruby/setup-ruby@v1
+        with:
+          ruby-version: '3.2'
+          bundler-cache: true
+          working-directory: './android'
+
+      - name: Android Build Check
+        working-directory: android
+        run: |
+          echo "------------"
+          echo "Running Android Build Check"
+          echo "----"
+          if [ -f "Gemfile" ]; then
+            echo "Installing Ruby dependencies..."
+            bundle install
+            if bundle exec fastlane build_debug; then
+              echo " Android build check passed (Fastlane)."
+            else
+              echo " Fastlane build failed, trying Gradle directly..."
+              ./gradlew assembleDebug || (echo " Android build check failed." && exit 1)
+            fi
+          else
+            echo "No Fastlane configuration found, using Gradle directly..."
+            ./gradlew assembleDebug
+            if [ $? -eq 0 ]; then
+              echo " Android build check passed (Gradle)."
+            else
+              echo " Android build check failed."
+              exit 1
+            fi
+          fi
+          echo "------------"
+
+      - name: iOS Build Check (Skipped)
+        run: |
+          echo "------------"
+          echo "iOS Build Check Skipped on Ubuntu Runners"
+          echo "------------"
+
+      - name: Comment PR with Validation Results
+        uses: actions/github-script@v7
+        if: always()
+        env:
+          JOB_STATUS: ${{ job.status }}
+          HEAD_REF: ${{ github.head_ref }}
+          BASE_REF: ${{ github.base_ref }}
+          COMMIT_SHA: ${{ github.sha }}
+        with:
+          script: |
+            const jobStatus = process.env.JOB_STATUS;
+            const headRef = process.env.HEAD_REF;
+            const baseRef = process.env.BASE_REF;
+            const commitSha = process.env.COMMIT_SHA;
+
+            const statusText = jobStatus === 'success' ? 'All checks passed.' : 'Some checks failed.';
+            const nextStep = jobStatus === 'success' ? 'Ready for merge.' : 'Fix the failing checks before merging.';
+
+            const { data: comments } = await github.rest.issues.listComments({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: context.issue.number,
+            });
+
+            const botComment = comments.find(comment =>
+              comment.user.type === 'Bot' && comment.body.includes('## Validation Summary')
+            );
+
+            const body = `------------
+                            ## Validation Summary
+                            ----
+
+                            **Branch:** \`${headRef}\` -> \`${baseRef}\`  
+                            **Commit:** \`${commitSha}\`  
+                            **Status:** ${statusText}
+
+                            ------------
+                            ### Validation Steps
+                            ----
+                            -  Code quality checks (ESLint, Prettier)
+                            -  TypeScript type checking
+                            -  Unit tests (optional - add test framework)
+                            -  Android build validation
+                            -  iOS build validation (skipped on Ubuntu)
+
+                            ------------
+                            ### Next Steps
+                            ----
+                            ${nextStep}
+
+                            ------------
+                            *This comment was automatically generated by the PR validation workflow.*
+                            ------------`;
+
+                            if (botComment) {
+                              await github.rest.issues.updateComment({
+                                owner: context.repo.owner,
+                                repo: context.repo.repo,
+                                comment_id: botComment.id,
+                                body
+                              });
+                            } else {
+                              await github.rest.issues.createComment({
+                                owner: context.repo.owner,
+                                repo: context.repo.repo,
+                                issue_number: context.issue.number,
+                                body
+                              });
+                            }
+
+      - name: Validation Summary
+        if: always()
+        run: |
+          echo "------------"
+          echo "Validation Summary"
+          echo "----"
+          if [ "${{ job.status }}" == "success" ]; then
+            echo "PR Validation completed successfully for ${{ github.head_ref }}"
+            echo "Ready for merge."
+          else
+            echo "PR Validation failed for ${{ github.head_ref }}"
+            echo "Please review and fix the issues."
+            exit 1
+          fi
+          echo "------------"

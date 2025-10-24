@@ -1,0 +1,677 @@
+# ============================================================================
+# Mobile App CI/CD Pipeline
+# ============================================================================
+# Purpose: Complete CI/CD pipeline for React Native mobile applications
+#          Handles validation, building, and deployment to multiple environments
+#
+# Workflow Stages:
+#   1. Validation: Code quality checks (lint, format, typecheck)
+#   2. Build: Parallel Android and iOS builds
+#   3. Approval: Manual approval gates for each environment
+#   4. Deploy: Environment-specific deployments
+#
+# Supported Environments:
+#   - Development: Internal testing, TestFlight beta
+#   - QA: Quality assurance testing
+#   - Production: App Store and Google Play releases
+#
+# Triggers:
+#   - Push to develop, main, or feature branches
+#   - Manual workflow dispatch with environment selection
+# ============================================================================
+
+name: Mobile App CI/CD
+
+on:
+  push:
+    branches:
+      - develop
+      - main
+      - feature/DFE-1074-mobile-app-cicd-infra-pipeline  # Feature branch for pipeline testing
+  workflow_dispatch:
+    inputs:
+      environment:
+        description: "Target environment for deployment"
+        required: true
+        default: development
+        type: choice
+        options:
+          - development
+          - qa
+          - production
+
+# Concurrency Control
+# Prevents multiple pipeline runs for the same branch from executing simultaneously
+# This ensures build artifacts and deployments don't conflict with each other
+# cancel-in-progress: false means queued runs will wait rather than being cancelled
+concurrency:
+  group: mobile-${{ github.ref }}
+  cancel-in-progress: false
+
+# Global Environment Variables
+env:
+  NODE_VERSION: '20'  # Node.js version for consistent builds across all jobs
+
+# ============================================================================
+# JOB 1: Code Validation
+# ============================================================================
+# Purpose: Ensures code quality and type safety before building
+# Runs: ESLint, Prettier, and TypeScript checks
+# Timeout: 20 minutes (prevents hanging on infinite loops or network issues)
+# Runner: Ubuntu (fastest and cheapest for validation tasks)
+#
+# This job must pass before any builds are attempted, preventing
+# wasted build time on code that won't compile or pass quality checks
+# ============================================================================
+jobs:
+  validate:
+    name: Validate (Lint, Typecheck)
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+
+    steps:
+      # ======================================================================
+      # Step 1: Checkout Repository
+      # Fetches the source code for validation
+      # ======================================================================
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+
+      # ======================================================================
+      # Step 2: Setup Node.js
+      # Configures Node.js environment for running npm scripts
+      # ======================================================================
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+
+      # ======================================================================
+      # Step 3: Cache npm Dependencies
+      # Caches node_modules to speed up subsequent runs
+      # Cache key is based on bun.lock hash for accuracy
+      # ======================================================================
+      - name: Cache npm dependencies
+        uses: actions/cache@v4
+        with:
+          path: ~/.npm
+          key: ${{ runner.os }}-node-${{ hashFiles('**/bun.lock') }}
+          restore-keys: |
+            ${{ runner.os }}-node-
+
+      # ======================================================================
+      # Step 4: Install Dependencies
+      # Uses 'npm install' to install dependencies from package.json
+      # ======================================================================
+      - name: Install dependencies
+        run: npm install
+
+      # ======================================================================
+      # Step 5: Run ESLint and Prettier
+      # Checks code for style violations, formatting, and potential errors
+      # The lint script runs both ESLint and Prettier checks
+      # Fails the workflow if any linting or formatting errors are found
+      # ======================================================================
+      - name: Run ESLint and Prettier
+        run: npm run lint
+
+      # ======================================================================
+      # Step 6: Run TypeScript Type Checks
+      # Validates TypeScript types without emitting compiled files
+      # Catches type errors that could cause runtime issues
+      # ======================================================================
+      - name: Run TypeScript checks
+        run: npm run type-check
+
+# ============================================================================
+# JOB 2: Android Build
+# ============================================================================
+# Purpose: Builds Android app bundle (AAB) and APK for distribution
+# Runs: Only after validation passes
+# Timeout: 40 minutes (Android builds can be slow)
+# Runner: Ubuntu (has Android SDK pre-installed)
+#
+# Process:
+#   1. Verify/create Android native project (Expo prebuild if needed)
+#   2. Setup Java and Ruby environments
+#   3. Build release artifacts using Fastlane
+#   4. Upload AAB/APK as workflow artifacts
+#
+# Outputs: Android AAB (for Play Store) and APK (for direct distribution)
+# ============================================================================
+  build_android:
+    name: Build Android Artifact
+    runs-on: ubuntu-latest
+    needs: validate  # Only runs if validation passes
+    timeout-minutes: 90
+
+    steps:
+      # ======================================================================
+      # Step 1: Checkout Repository
+      # ======================================================================
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+
+      # ======================================================================
+      # Step 2: Setup Node.js
+      # ======================================================================
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+
+      # ======================================================================
+      # Step 3: Install JavaScript Dependencies
+      # ======================================================================
+      - name: Install JS dependencies
+        run: npm install
+
+      # ======================================================================
+      # Step 4: Verify or Create Android Project
+      # Checks if Android native project exists (android/gradlew)
+      # If not found: Runs Expo prebuild to generate native Android project
+      # If found: Runs post-prebuild script to restore Fastlane configs
+      # This ensures the project is ready for Gradle builds
+      # ======================================================================
+      - name: Verify or Create Android Project
+        run: |
+          if [ ! -f "android/gradlew" ]; then
+            echo "Android project not found, running prebuild..."
+            npx expo prebuild --platform android --clean
+            echo "Restoring Fastlane files..."
+            ./.github/scripts/post-prebuild.sh
+          else
+            echo "Android project found, running post-prebuild..."
+            ./.github/scripts/post-prebuild.sh
+          fi
+          if [ ! -f "android/gradlew" ]; then
+            echo "Android project not created properly."
+            exit 1
+          fi
+
+      # ======================================================================
+      # Step 5: Setup Java
+      # Installs Java 17 (Temurin distribution) required for Gradle builds
+      # Android Gradle Plugin requires Java 17 for modern Android projects
+      # ======================================================================
+      - name: Setup Java
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+
+      # ======================================================================
+      # Step 6: Setup Ruby
+      # Installs Ruby 3.2 for running Fastlane automation
+      # bundler-cache: false to allow manual bundle install with custom config
+      # ======================================================================
+      - name: Setup Ruby
+        uses: ruby/setup-ruby@v1
+        with:
+          ruby-version: '3.2'
+          bundler-cache: false
+
+      # ======================================================================
+      # Step 7: Install Fastlane Dependencies
+      # Installs Ruby gems defined in android/Gemfile
+      # frozen: false allows flexible dependency resolution in CI
+      # ======================================================================
+      - name: Install Fastlane dependencies
+        run: |
+          cd android
+          bundle config set --local frozen false
+          bundle install
+
+      # ======================================================================
+      # Step 8: Build Android Release
+      # Builds production-ready Android artifacts using Fastlane
+      # Outputs: AAB (for Play Store) and APK (for direct distribution)
+      # Environment variables ensure CI-friendly behavior
+      # ======================================================================
+      - name: Build Android release
+        working-directory: android
+        env:
+          CI: true
+          FASTLANE_SKIP_UPDATE_CHECK: true
+        run: bundle exec fastlane build_release
+
+      # ======================================================================
+      # Step 9: Upload Android Build Artifacts
+      # Uploads AAB and APK files as workflow artifacts
+      # These can be downloaded for manual testing or used in deployment jobs
+      # Artifacts are retained for 90 days by default
+      # ======================================================================
+      - name: Upload Android build artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: android-build
+          path: |
+            android/app/build/outputs/bundle/release/*.aab
+            android/app/build/outputs/apk/release/*.apk
+
+# ============================================================================
+# JOB 3: iOS Build
+# ============================================================================
+# Purpose: Builds iOS IPA for TestFlight and App Store distribution
+# Runs: Only after validation passes (parallel with Android build)
+# Timeout: 60 minutes (iOS builds are slower, especially with signing)
+# Runner: macOS 15 (required for Xcode and iOS builds)
+#
+# Process:
+#   1. Check for App Store Connect credentials
+#   2. Verify/create iOS native project (Expo prebuild if needed)
+#   3. Setup Ruby and Fastlane
+#   4. Build signed IPA (only if credentials exist)
+#   5. Upload IPA as workflow artifact
+#
+# Note: Build is skipped if APP_STORE_CONNECT_API_KEY_JSON secret is missing
+#       This allows the workflow to run in environments without iOS credentials
+# ============================================================================
+  build_ios:
+    name: Build iOS Artifact
+    runs-on: macos-15
+    needs: validate  # Only runs if validation passes
+    env:
+      HAS_IOS_API_KEY: ${{ secrets.APPLE_TEAM_ID != '' }}
+    timeout-minutes: 60
+
+    steps:
+      # ======================================================================
+      # Step 1: Checkout Repository
+      # ======================================================================
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+
+      # ======================================================================
+      # Step 2: Setup Node.js
+      # ======================================================================
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+
+      # ======================================================================
+      # Step 3: Install JavaScript Dependencies
+      # ======================================================================
+      - name: Install JS dependencies
+        run: npm install
+
+      # ======================================================================
+      # Step 4: Verify or Create iOS Project
+      # Checks if iOS native project exists (ios/*.xcworkspace)
+      # If not found: Runs Expo prebuild to generate native iOS project
+      # If found: Runs post-prebuild script to restore Fastlane configs
+      # This ensures the project is ready for Xcode builds
+      # ======================================================================
+      - name: Verify or Create iOS Project
+        run: |
+          if [ ! -d "ios" ] || [ -z "$(ls -A ios/*.xcworkspace 2>/dev/null)" ]; then
+            echo "iOS project not found, running prebuild..."
+            npx expo prebuild --platform ios --clean
+            echo "Restoring Fastlane files..."
+            ./.github/scripts/post-prebuild.sh
+          else
+            echo "iOS project found, running post-prebuild..."
+            ./.github/scripts/post-prebuild.sh
+          fi
+          if [ ! -d "ios" ] || [ -z "$(ls -A ios/*.xcworkspace 2>/dev/null)" ]; then
+            echo "iOS project not created properly."
+            exit 1
+          fi
+
+      # ======================================================================
+      # Step 5: Setup Ruby
+      # Installs Ruby 3.2 for running Fastlane automation
+      # ======================================================================
+      - name: Setup Ruby
+        uses: ruby/setup-ruby@v1
+        with:
+          ruby-version: '3.2'
+          bundler-cache: false
+
+      # ======================================================================
+      # Step 6: Install Fastlane Dependencies
+      # Installs Ruby gems defined in ios/Gemfile
+      # ======================================================================
+      - name: Install Fastlane dependencies
+        run: |
+          cd ios
+          bundle config set --local frozen false
+          bundle install
+
+      # ======================================================================
+      # Step 7: Skip iOS Build (No Credentials)
+      # If APP_STORE_CONNECT_API_KEY_JSON secret is not configured,
+      # the build is skipped with an informative message
+      # This allows the workflow to succeed in development environments
+      # ======================================================================
+      - name: Skip iOS build (no credentials)
+        if: ${{ env.HAS_IOS_API_KEY == 'false' }}
+        run: |
+          echo "Skipping iOS build - no signing credentials found."
+          echo "Add APP_STORE_CONNECT_API_KEY_JSON secret to enable iOS builds."
+
+      # ======================================================================
+      # Step 8: Build iOS App Store IPA
+      # Builds production-ready iOS IPA using Fastlane
+      # Requires: App Store Connect API key, Apple Team ID, and Apple ID
+      # Output: Signed IPA ready for TestFlight or App Store submission
+      # Only runs if credentials are available
+      # ======================================================================
+      - name: Build iOS App Store IPA
+        if: ${{ env.HAS_IOS_API_KEY == 'true' }}
+        working-directory: ios
+        env:
+          CI: true
+          APP_STORE_CONNECT_API_KEY_JSON: ${{ secrets.APPLE_TEAM_ID }}
+          APPLE_TEAM_ID: ${{ vars.APPLE_TEAM_ID_VAR }}
+          APPLE_ID: ${{ vars.APPLE_ID }}
+        run: bundle exec fastlane build_appstore_ipa
+
+      # ======================================================================
+      # Step 9: Upload iOS Build Artifacts
+      # Uploads IPA file as workflow artifact
+      # Only runs if the build was successful (credentials were available)
+      # Artifacts are retained for 90 days by default
+      # ======================================================================
+      - name: Upload iOS build artifacts
+        if: ${{ env.HAS_IOS_API_KEY == 'true' }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: ios-build
+          path: ios/build/ios/*.ipa
+
+# ============================================================================
+# JOBS 4-6: Manual Approval Gates
+# ============================================================================
+# Purpose: Require human approval before deploying to each environment
+# Runs: Only for workflow_dispatch events (manual triggers)
+#
+# GitHub Environments provide:
+#   - Required reviewers (configured in repository settings)
+#   - Deployment protection rules
+#   - Environment-specific secrets
+#   - Deployment history and audit logs
+#
+# Approval Flow:
+#   1. Builds complete successfully
+#   2. Workflow pauses at approval job
+#   3. Designated reviewers receive notification
+#   4. Reviewer approves or rejects deployment
+#   5. If approved, deployment job proceeds
+#
+# Note: Development only requires Android build, while QA and Production
+#       require both Android and iOS builds to complete
+# ============================================================================
+
+  # Development Environment Approval
+  # Requires: Android build only (faster iteration for internal testing)
+  approve_development:
+    name: Manual Approval (Development)
+    runs-on: ubuntu-latest
+    needs: [build_android]
+    if: ${{ github.event_name == 'workflow_dispatch' && inputs.environment == 'development' }}
+    environment:
+      name: development
+    steps:
+      - run: echo "Development deployment approved"
+
+  # QA Environment Approval
+  # Requires: Both Android and iOS builds (full platform testing)
+  approve_qa:
+    name: Manual Approval (QA)
+    runs-on: ubuntu-latest
+    needs: [build_android, build_ios]
+    if: ${{ github.event_name == 'workflow_dispatch' && inputs.environment == 'qa' }}
+    environment:
+      name: qa
+    steps:
+      - run: echo "QA deployment approved"
+
+  # Production Environment Approval
+  # Requires: Both Android and iOS builds (full platform release)
+  approve_production:
+    name: Manual Approval (Production)
+    runs-on: ubuntu-latest
+    needs: [build_android, build_ios]
+    if: ${{ github.event_name == 'workflow_dispatch' && inputs.environment == 'production' }}
+    environment:
+      name: production
+    steps:
+      - run: echo "Production deployment approved"
+
+# ============================================================================
+# JOBS 7-9: Environment Deployments
+# ============================================================================
+# Purpose: Deploy approved builds to respective distribution channels
+# Runs: Only after manual approval is granted
+# Runner: macOS (required for iOS deployment tools)
+#
+# Deployment Targets:
+#   Development:
+#     - Android: Internal testing track (Google Play)
+#     - iOS: TestFlight beta
+#   QA:
+#     - Android: Beta track (Google Play)
+#     - iOS: TestFlight beta
+#   Production:
+#     - Android: Production track (Google Play)
+#     - iOS: App Store release
+#
+# Process:
+#   1. Download build artifacts from previous jobs
+#   2. Restore Fastlane configuration files
+#   3. Deploy to appropriate distribution channel using Fastlane
+#   4. Fastlane handles authentication, upload, and release notes
+# ============================================================================
+
+  # ==========================================================================
+  # Development Deployment
+  # Target: Internal testing channels for rapid iteration
+  # Android: Internal testing track (limited testers)
+  # iOS: TestFlight beta (internal testers)
+  # ==========================================================================
+  deploy_development:
+    name: Deploy to Development
+    runs-on: macos-15
+    needs: [approve_development]
+    if: ${{ github.event_name == 'workflow_dispatch' && inputs.environment == 'development' }}
+    environment:
+      name: development
+    steps:
+      # ======================================================================
+      # Step 1: Checkout Repository
+      # Needed for Fastlane configuration and deployment scripts
+      # ======================================================================
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+
+      # ======================================================================
+      # Step 2: Download Android Artifacts
+      # Retrieves AAB/APK files built in the build_android job
+      # ======================================================================
+      - name: Download Android Artifacts
+        uses: actions/download-artifact@v4
+        with:
+          name: android-build
+          path: android-artifacts
+
+      # ======================================================================
+      # Step 3: Setup Ruby
+      # Required for running Fastlane deployment commands
+      # ======================================================================
+      - name: Setup Ruby
+        uses: ruby/setup-ruby@v1
+        with:
+          ruby-version: '3.2'
+
+      # ======================================================================
+      # Step 4: Restore Fastlane Files
+      # Runs post-prebuild script to restore Fastlane configuration
+      # This ensures Fastlane has access to lanes and metadata
+      # ======================================================================
+      - name: Restore Fastlane files
+        run: ./.github/scripts/post-prebuild.sh
+
+      # ======================================================================
+      # Step 5: Deploy Android to Internal Track
+      # Uploads AAB to Google Play Internal Testing track
+      # Uses service account credentials for authentication
+      # ======================================================================
+      - name: Deploy Android to Internal Track
+        working-directory: android
+        env:
+          SUPPLY_JSON_KEY_DATA: ${{ secrets.GCP_SERVICE_ACCOUNT_PRIVATE_KEY }}
+        run: bundle exec fastlane deploy_beta
+
+      # ======================================================================
+      # Step 6: Download iOS Artifacts
+      # Retrieves IPA file built in the build_ios job
+      # ======================================================================
+      - name: Download iOS Artifacts
+        uses: actions/download-artifact@v4
+        with:
+          name: ios-build
+          path: ios-artifacts
+
+      # ======================================================================
+      # Step 7: Upload iOS IPA to TestFlight
+      # Uploads IPA to TestFlight for internal beta testing
+      # Uses App Store Connect API key for authentication
+      # ======================================================================
+      - name: Upload iOS IPA to TestFlight
+        working-directory: ios
+        env:
+          APP_STORE_CONNECT_API_KEY_JSON: ${{ secrets.APP_STORE_CONNECT_API_KEY_JSON }}
+        run: bundle exec fastlane upload_testflight_ipa ipa:$(ls ../ios-artifacts/*.ipa | head -n1)
+
+  # ==========================================================================
+  # QA Deployment
+  # Target: Quality assurance testing channels
+  # Android: Beta track (wider tester group)
+  # iOS: TestFlight beta (QA team)
+  # ==========================================================================
+  deploy_qa:
+    name: Deploy to QA
+    runs-on: macos-15
+    needs: [approve_qa]
+    if: ${{ github.event_name == 'workflow_dispatch' && inputs.environment == 'qa' }}
+    environment:
+      name: qa
+    steps:
+      # ======================================================================
+      # Step 1: Checkout Repository
+      # ======================================================================
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+
+      # ======================================================================
+      # Step 2: Download Android Artifacts
+      # ======================================================================
+      - name: Download Android Artifacts
+        uses: actions/download-artifact@v4
+        with:
+          name: android-build
+          path: android-artifacts
+
+      # ======================================================================
+      # Step 3: Download iOS Artifacts
+      # ======================================================================
+      - name: Download iOS Artifacts
+        uses: actions/download-artifact@v4
+        with:
+          name: ios-build
+          path: ios-artifacts
+
+      # ======================================================================
+      # Step 4: Restore Fastlane Files
+      # ======================================================================
+      - name: Restore Fastlane files
+        run: ./.github/scripts/post-prebuild.sh
+
+      # ======================================================================
+      # Step 5: Deploy Android to Beta Track
+      # Uploads AAB to Google Play Beta track for QA testing
+      # ======================================================================
+      - name: Deploy Android (QA)
+        working-directory: android
+        env:
+          SUPPLY_JSON_KEY_DATA: ${{ secrets.GCP_SERVICE_ACCOUNT_PRIVATE_KEY }}
+        run: bundle exec fastlane deploy_beta
+
+      # ======================================================================
+      # Step 6: Deploy iOS to TestFlight (QA)
+      # Uploads IPA to TestFlight for QA team testing
+      # ======================================================================
+      - name: Deploy iOS to TestFlight (QA)
+        working-directory: ios
+        env:
+          APP_STORE_CONNECT_API_KEY_JSON: ${{ secrets.APP_STORE_CONNECT_API_KEY_JSON }}
+        run: bundle exec fastlane upload_testflight_ipa ipa:$(ls ../ios-artifacts/*.ipa | head -n1)
+
+  # ==========================================================================
+  # Production Deployment
+  # Target: Public release channels
+  # Android: Production track (Google Play Store)
+  # iOS: App Store release
+  #
+  # IMPORTANT: This is the final release to end users
+  # Ensure all testing is complete before approving this deployment
+  # ==========================================================================
+  deploy_production:
+    name: Deploy to Production
+    runs-on: macos-15
+    needs: [approve_production]
+    if: ${{ github.event_name == 'workflow_dispatch' && inputs.environment == 'production' }}
+    environment:
+      name: production
+    steps:
+      # ======================================================================
+      # Step 1: Checkout Repository
+      # ======================================================================
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+
+      # ======================================================================
+      # Step 2: Download Android Artifacts
+      # ======================================================================
+      - name: Download Android Artifacts
+        uses: actions/download-artifact@v4
+        with:
+          name: android-build
+          path: android-artifacts
+
+      # ======================================================================
+      # Step 3: Download iOS Artifacts
+      # ======================================================================
+      - name: Download iOS Artifacts
+        uses: actions/download-artifact@v4
+        with:
+          name: ios-build
+          path: ios-artifacts
+
+      # ======================================================================
+      # Step 4: Restore Fastlane Files
+      # ======================================================================
+      - name: Restore Fastlane files
+        run: ./.github/scripts/post-prebuild.sh
+
+      # ======================================================================
+      # Step 5: Deploy Android to Production
+      # Uploads AAB to Google Play Production track for public release
+      # ======================================================================
+      - name: Deploy Android to Production
+        working-directory: android
+        env:
+          SUPPLY_JSON_KEY_DATA: ${{ secrets.ANDROID_SERVICE_ACCOUNT_JSON }}
+        run: bundle exec fastlane deploy_production
+
+      # ======================================================================
+      # Step 6: Upload iOS IPA to App Store
+      # Uploads IPA to App Store for public release
+      # ======================================================================
+      - name: Upload iOS IPA to App Store
+        working-directory: ios
+        env:
+          APP_STORE_CONNECT_API_KEY_JSON: ${{ secrets.APP_STORE_CONNECT_API_KEY_JSON }}
+        run: bundle exec fastlane upload_appstore_ipa ipa:$(ls ../ios-artifacts/*.ipa | head -n1)
