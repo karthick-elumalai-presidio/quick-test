@@ -272,7 +272,7 @@ jobs:
     runs-on: macos-15
     needs: validate  # Only runs if validation passes
     env:
-      HAS_IOS_API_KEY: ${{ secrets.APPLE_TEAM_ID != '' }}
+      HAS_IOS_API_KEY: ${{ secrets.APP_STORE_CONNECT_API_KEY_JSON != '' && secrets.APPLE_TEAM_ID != '' }}
     timeout-minutes: 60
 
     steps:
@@ -363,9 +363,9 @@ jobs:
         working-directory: ios
         env:
           CI: true
-          APP_STORE_CONNECT_API_KEY_JSON: ${{ secrets.APPLE_TEAM_ID }}
-          APPLE_TEAM_ID: ${{ vars.APPLE_TEAM_ID_VAR }}
-          APPLE_ID: ${{ vars.APPLE_ID }}
+          APP_STORE_CONNECT_API_KEY_JSON: ${{ secrets.APP_STORE_CONNECT_API_KEY_JSON }}
+          APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
+          APPLE_ID: ${{ secrets.APPLE_ID }}
         run: bundle exec fastlane build_appstore_ipa
 
       # ======================================================================
