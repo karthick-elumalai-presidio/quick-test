@@ -320,7 +320,18 @@ jobs:
           fi
 
       # ======================================================================
-      # Step 5: Setup Ruby
+      # Step 5: Install CocoaPods Dependencies
+      # Installs all iOS native dependencies including Expo modules
+      # This generates required module map files and configures the Xcode project
+      # Critical step: Without this, the build will fail with "no such module" errors
+      # ======================================================================
+      - name: Install CocoaPods dependencies
+        run: |
+          cd ios
+          pod install
+
+      # ======================================================================
+      # Step 6: Setup Ruby
       # Installs Ruby 3.2 for running Fastlane automation
       # ======================================================================
       - name: Setup Ruby
@@ -330,7 +341,7 @@ jobs:
           bundler-cache: false
 
       # ======================================================================
-      # Step 6: Install Fastlane Dependencies
+      # Step 7: Install Fastlane Dependencies
       # Installs Ruby gems defined in ios/Gemfile
       # ======================================================================
       - name: Install Fastlane dependencies
@@ -340,7 +351,7 @@ jobs:
           bundle install
 
       # ======================================================================
-      # Step 7: Skip iOS Build (No Credentials)
+      # Step 8: Skip iOS Build (No Credentials)
       # If APP_STORE_CONNECT_API_KEY_JSON secret is not configured,
       # the build is skipped with an informative message
       # This allows the workflow to succeed in development environments
@@ -352,7 +363,7 @@ jobs:
           echo "Add APP_STORE_CONNECT_API_KEY_JSON secret to enable iOS builds."
 
       # ======================================================================
-      # Step 8: Build iOS App Store IPA
+      # Step 9: Build iOS App Store IPA
       # Builds production-ready iOS IPA using Fastlane
       # Requires: App Store Connect API key, Apple Team ID, and Apple ID
       # Output: Signed IPA ready for TestFlight or App Store submission
@@ -369,7 +380,7 @@ jobs:
         run: bundle exec fastlane build_appstore_ipa
 
       # ======================================================================
-      # Step 9: Upload iOS Build Artifacts
+      # Step 10: Upload iOS Build Artifacts
       # Uploads IPA file as workflow artifact
       # Only runs if the build was successful (credentials were available)
       # Artifacts are retained for 90 days by default
