@@ -5,21 +5,21 @@ default_platform(:ios)
 
 platform :ios do
   ##############################################
-  # 1️⃣ Setup
+  # Setup
   ##############################################
   before_all do
     setup_ci if ENV['CI'] # Optimize Fastlane for CI
-    UI.message("🚀 Starting iOS CI/CD Pipeline for CbMmobileapp")
+    UI.message("Starting iOS CI/CD Pipeline for CbMmobileapp")
   end
 
   ##############################################
-  # 2️⃣ Build (No Signing - for CI validation)
+  # Build (No Signing - for CI validation)
   ##############################################
   desc "Build iOS app without signing (for CI validation)"
   lane :build_ci do
-    UI.message("🔨 Building iOS app for CI validation (no signing)...")
+    UI.message("Building iOS app for CI validation (no signing)...")
     gym(
-      project: "CbMmobileapp.xcodeproj",
+      workspace: "CbMmobileapp.xcworkspace",
       scheme: "CbMmobileapp",
       configuration: "Release",
       skip_package_ipa: true,
@@ -28,17 +28,17 @@ platform :ios do
       derived_data_path: "build/derived_data",
       xcargs: "CODE_SIGNING_ALLOWED=NO CODE_SIGNING_REQUIRED=NO"
     )
-    UI.success("✅ iOS build completed successfully (CI validation)")
+    UI.success("iOS build completed successfully (CI validation)")
   end
 
   ##############################################
-  # 3️⃣ Build Debug (Development) IPA
+  # Build Debug (Development) IPA
   ##############################################
   desc "Build development-signed IPA (Debug)"
   lane :build_debug do
-    UI.message("🔧 Building Debug IPA with Automatic Code Signing...")
+    UI.message("Building Debug IPA with Automatic Code Signing...")
     build_app(
-      project: "CbMmobileapp.xcodeproj",
+      workspace: "CbMmobileapp.xcworkspace",
       scheme: "CbMmobileapp",
       configuration: "Debug",
       export_method: "development",
@@ -50,13 +50,13 @@ platform :ios do
   end
 
   ##############################################
-  # 4️⃣ Build App Store (Release) IPA
+  # Build App Store (Release) IPA
   ##############################################
   desc "Build App Store (Release) IPA for upload"
   lane :build_appstore_ipa do
     begin
       if ENV['APPLE_TEAM_ID'] && !ENV['APPLE_TEAM_ID'].empty?
-        UI.success("✅ Using automatic code signing with Team ID: #{ENV['APPLE_TEAM_ID']}")
+        UI.success("Using automatic code signing with Team ID: #{ENV['APPLE_TEAM_ID']}")
 
         update_code_signing_settings(
           path: "CbMmobileapp.xcodeproj",
@@ -67,11 +67,11 @@ platform :ios do
           build_configurations: ["Release"]
         )
       else
-        UI.user_error!("❌ APPLE_TEAM_ID not set — please define it in GitHub Secrets")
+        UI.user_error!("APPLE_TEAM_ID not set - please define it in GitHub Secrets")
       end
 
       build_app(
-        project: "CbMmobileapp.xcodeproj",
+        workspace: "CbMmobileapp.xcworkspace",
         scheme: "CbMmobileapp",
         configuration: "Release",
         export_method: "app-store",
@@ -88,23 +88,23 @@ platform :ios do
         xcargs: "DEVELOPMENT_TEAM=#{ENV['APPLE_TEAM_ID']} CODE_SIGN_STYLE=Automatic"
       )
 
-      UI.success("🎉 iOS Release IPA successfully built at build/ios/release.ipa")
+      UI.success("iOS Release IPA successfully built at build/ios/release.ipa")
     rescue => ex
-      UI.error("❌ iOS build failed: #{ex.message}")
+      UI.error("iOS build failed: #{ex.message}")
       raise ex
     end
   end
 
   ##############################################
-  # 5️⃣ Upload to TestFlight (Dev/QA)
+  # Upload to TestFlight (Dev/QA)
   ##############################################
   desc "Upload built IPA to TestFlight"
   lane :upload_testflight_ipa do |options|
     ipa_path = options[:ipa] || "build/ios/release.ipa"
-    UI.message("🚀 Preparing to upload IPA to TestFlight...")
+    UI.message("Preparing to upload IPA to TestFlight...")
 
     if ENV['APP_STORE_CONNECT_API_KEY_JSON']
-      UI.success("✅ Using App Store Connect API Key for authentication")
+      UI.success("Using App Store Connect API Key for authentication")
       key_json = JSON.parse(ENV['APP_STORE_CONNECT_API_KEY_JSON'])
       api_key = app_store_connect_api_key(
         key_id: key_json['key_id'],
@@ -118,7 +118,7 @@ platform :ios do
         skip_waiting_for_build_processing: true
       )
     elsif ENV['APPLE_ID'] && ENV['APPLE_APP_SPECIFIC_PASSWORD']
-      UI.important("⚠️ Using Apple ID credentials instead of API Key")
+      UI.important("Using Apple ID credentials instead of API Key")
       upload_to_testflight(
         ipa: ipa_path,
         username: ENV['APPLE_ID'],
@@ -126,17 +126,17 @@ platform :ios do
         skip_waiting_for_build_processing: true
       )
     else
-      UI.user_error!("❌ No authentication configured for TestFlight upload (missing APP_STORE_CONNECT_API_KEY_JSON or APPLE_ID creds)")
+      UI.user_error!("No authentication configured for TestFlight upload (missing APP_STORE_CONNECT_API_KEY_JSON or APPLE_ID creds)")
     end
   end
 
   ##############################################
-  # 6️⃣ Upload to App Store (Production)
+  # Upload to App Store (Production)
   ##############################################
   desc "Upload existing IPA to App Store"
   lane :upload_appstore_ipa do |options|
     ipa_path = options[:ipa] || "build/ios/release.ipa"
-    UI.message("📦 Uploading IPA to App Store...")
+    UI.message("Uploading IPA to App Store...")
 
     if ENV['APP_STORE_CONNECT_API_KEY_JSON']
       key_json = JSON.parse(ENV['APP_STORE_CONNECT_API_KEY_JSON'])
@@ -154,9 +154,9 @@ platform :ios do
         submit_for_review: false
       )
 
-      UI.success("✅ IPA uploaded successfully to App Store (not submitted for review).")
+      UI.success("IPA uploaded successfully to App Store (not submitted for review).")
     else
-      UI.user_error!("❌ APP_STORE_CONNECT_API_KEY_JSON missing — required for App Store upload.")
+      UI.user_error!("APP_STORE_CONNECT_API_KEY_JSON missing - required for App Store upload.")
     end
   end
 end
