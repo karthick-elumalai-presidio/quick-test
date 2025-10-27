@@ -508,7 +508,31 @@ jobs:
           path: android-artifacts
 
       # ======================================================================
-      # Step 3: Setup Ruby
+      # Step 3: Setup Node.js
+      # Required for running Expo prebuild to create Android project structure
+      # ======================================================================
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+
+      # ======================================================================
+      # Step 4: Install JavaScript Dependencies
+      # Required for Expo prebuild to work
+      # ======================================================================
+      - name: Install JS dependencies
+        run: npm install
+
+      # ======================================================================
+      # Step 5: Create Android Project Structure
+      # Recreates the android/ directory structure needed by Fastlane
+      # This is necessary because only the AAB/APK artifacts were downloaded
+      # ======================================================================
+      - name: Create Android project structure
+        run: npx expo prebuild --platform android --clean
+
+      # ======================================================================
+      # Step 6: Setup Ruby
       # Required for running Fastlane deployment commands
       # ======================================================================
       - name: Setup Ruby
@@ -517,7 +541,7 @@ jobs:
           ruby-version: '3.2'
 
       # ======================================================================
-      # Step 4: Restore Fastlane Files
+      # Step 7: Restore Fastlane Files
       # Runs post-prebuild script to restore Fastlane configuration
       # This ensures Fastlane has access to lanes and metadata
       # ======================================================================
@@ -525,7 +549,7 @@ jobs:
         run: ./.github/scripts/post-prebuild.sh
 
       # ======================================================================
-      # Step 5: Install Fastlane Dependencies
+      # Step 8: Install Fastlane Dependencies
       # Installs Ruby gems needed for deployment
       # ======================================================================
       - name: Install Fastlane dependencies
@@ -535,7 +559,7 @@ jobs:
           bundle install
 
       # ======================================================================
-      # Step 6: Deploy Android to Internal Track
+      # Step 9: Deploy Android to Internal Track
       # Uploads AAB to Google Play Internal Testing track
       # Uses service account credentials for authentication
       # ======================================================================
@@ -546,7 +570,7 @@ jobs:
         run: bundle exec fastlane deploy_internal
 
       # ======================================================================
-      # Step 7: Download iOS Artifacts
+      # Step 10: Download iOS Artifacts
       # Retrieves IPA file built in the build_ios job
       # ======================================================================
       - name: Download iOS Artifacts
@@ -556,7 +580,7 @@ jobs:
           path: ios-artifacts
 
       # ======================================================================
-      # Step 8: Install iOS Fastlane Dependencies
+      # Step 11: Install iOS Fastlane Dependencies
       # ======================================================================
       - name: Install iOS Fastlane dependencies
         working-directory: ios
@@ -565,7 +589,7 @@ jobs:
           bundle install
 
       # ======================================================================
-      # Step 9: Upload iOS IPA to TestFlight
+      # Step 12: Upload iOS IPA to TestFlight
       # Uploads IPA to TestFlight for internal beta testing
       # Uses App Store Connect API key for authentication
       # ======================================================================
@@ -605,22 +629,32 @@ jobs:
           path: android-artifacts
 
       # ======================================================================
-      # Step 3: Download iOS Artifacts
+      # Step 3: Setup Node.js
+      # Required for running Expo prebuild to create Android project structure
       # ======================================================================
-      - name: Download iOS Artifacts
-        uses: actions/download-artifact@v4
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
         with:
-          name: ios-build
-          path: ios-artifacts
+          node-version: ${{ env.NODE_VERSION }}
 
       # ======================================================================
-      # Step 4: Restore Fastlane Files
+      # Step 4: Install JavaScript Dependencies
+      # Required for Expo prebuild to work
       # ======================================================================
-      - name: Restore Fastlane files
-        run: ./.github/scripts/post-prebuild.sh
+      - name: Install JS dependencies
+        run: npm install
 
       # ======================================================================
-      # Step 5: Setup Ruby
+      # Step 5: Create Android Project Structure
+      # Recreates the android/ directory structure needed by Fastlane
+      # This is necessary because only the AAB/APK artifacts were downloaded
+      # ======================================================================
+      - name: Create Android project structure
+        run: npx expo prebuild --platform android --clean
+
+      # ======================================================================
+      # Step 6: Setup Ruby
+      # Required for running Fastlane deployment commands
       # ======================================================================
       - name: Setup Ruby
         uses: ruby/setup-ruby@v1
@@ -628,7 +662,16 @@ jobs:
           ruby-version: '3.2'
 
       # ======================================================================
-      # Step 6: Install Fastlane Dependencies
+      # Step 7: Restore Fastlane Files
+      # Runs post-prebuild script to restore Fastlane configuration
+      # This ensures Fastlane has access to lanes and metadata
+      # ======================================================================
+      - name: Restore Fastlane files
+        run: ./.github/scripts/post-prebuild.sh
+
+      # ======================================================================
+      # Step 8: Install Fastlane Dependencies
+      # Installs Ruby gems needed for deployment
       # ======================================================================
       - name: Install Fastlane dependencies
         working-directory: android
@@ -637,7 +680,16 @@ jobs:
           bundle install
 
       # ======================================================================
-      # Step 7: Deploy Android to Beta Track
+      # Step 9: Download iOS Artifacts
+      # ======================================================================
+      - name: Download iOS Artifacts
+        uses: actions/download-artifact@v4
+        with:
+          name: ios-build
+          path: ios-artifacts
+
+      # ======================================================================
+      # Step 10: Deploy Android to Beta Track
       # Uploads AAB to Google Play Beta track for QA testing
       # ======================================================================
       - name: Deploy Android (QA)
@@ -647,7 +699,7 @@ jobs:
         run: bundle exec fastlane deploy_beta
 
       # ======================================================================
-      # Step 8: Install iOS Fastlane Dependencies
+      # Step 11: Install iOS Fastlane Dependencies
       # ======================================================================
       - name: Install iOS Fastlane dependencies
         working-directory: ios
@@ -656,7 +708,7 @@ jobs:
           bundle install
 
       # ======================================================================
-      # Step 9: Deploy iOS to TestFlight (QA)
+      # Step 12: Deploy iOS to TestFlight (QA)
       # Uploads IPA to TestFlight for QA team testing
       # ======================================================================
       - name: Deploy iOS to TestFlight (QA)
@@ -698,22 +750,32 @@ jobs:
           path: android-artifacts
 
       # ======================================================================
-      # Step 3: Download iOS Artifacts
+      # Step 3: Setup Node.js
+      # Required for running Expo prebuild to create Android project structure
       # ======================================================================
-      - name: Download iOS Artifacts
-        uses: actions/download-artifact@v4
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
         with:
-          name: ios-build
-          path: ios-artifacts
+          node-version: ${{ env.NODE_VERSION }}
 
       # ======================================================================
-      # Step 4: Restore Fastlane Files
+      # Step 4: Install JavaScript Dependencies
+      # Required for Expo prebuild to work
       # ======================================================================
-      - name: Restore Fastlane files
-        run: ./.github/scripts/post-prebuild.sh
+      - name: Install JS dependencies
+        run: npm install
 
       # ======================================================================
-      # Step 5: Setup Ruby
+      # Step 5: Create Android Project Structure
+      # Recreates the android/ directory structure needed by Fastlane
+      # This is necessary because only the AAB/APK artifacts were downloaded
+      # ======================================================================
+      - name: Create Android project structure
+        run: npx expo prebuild --platform android --clean
+
+      # ======================================================================
+      # Step 6: Setup Ruby
+      # Required for running Fastlane deployment commands
       # ======================================================================
       - name: Setup Ruby
         uses: ruby/setup-ruby@v1
@@ -721,7 +783,16 @@ jobs:
           ruby-version: '3.2'
 
       # ======================================================================
-      # Step 6: Install Fastlane Dependencies
+      # Step 7: Restore Fastlane Files
+      # Runs post-prebuild script to restore Fastlane configuration
+      # This ensures Fastlane has access to lanes and metadata
+      # ======================================================================
+      - name: Restore Fastlane files
+        run: ./.github/scripts/post-prebuild.sh
+
+      # ======================================================================
+      # Step 8: Install Fastlane Dependencies
+      # Installs Ruby gems needed for deployment
       # ======================================================================
       - name: Install Fastlane dependencies
         working-directory: android
@@ -730,7 +801,16 @@ jobs:
           bundle install
 
       # ======================================================================
-      # Step 7: Deploy Android to Production
+      # Step 9: Download iOS Artifacts
+      # ======================================================================
+      - name: Download iOS Artifacts
+        uses: actions/download-artifact@v4
+        with:
+          name: ios-build
+          path: ios-artifacts
+
+      # ======================================================================
+      # Step 10: Deploy Android to Production
       # Uploads AAB to Google Play Production track for public release
       # ======================================================================
       - name: Deploy Android to Production
@@ -740,7 +820,7 @@ jobs:
         run: bundle exec fastlane deploy_production
 
       # ======================================================================
-      # Step 8: Install iOS Fastlane Dependencies
+      # Step 11: Install iOS Fastlane Dependencies
       # ======================================================================
       - name: Install iOS Fastlane dependencies
         working-directory: ios
@@ -749,7 +829,7 @@ jobs:
           bundle install
 
       # ======================================================================
-      # Step 9: Upload iOS IPA to App Store
+      # Step 12: Upload iOS IPA to App Store
       # Uploads IPA to App Store for public release
       # ======================================================================
       - name: Upload iOS IPA to App Store
