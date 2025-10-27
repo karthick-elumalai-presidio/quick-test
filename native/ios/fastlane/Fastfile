@@ -58,14 +58,9 @@ platform :ios do
       if ENV['APPLE_TEAM_ID'] && !ENV['APPLE_TEAM_ID'].empty?
         UI.success("Using automatic code signing with Team ID: #{ENV['APPLE_TEAM_ID']}")
 
-        update_code_signing_settings(
-          path: "CbM_mobile_app.xcodeproj",
-          use_automatic_signing: true,
-          team_id: ENV['APPLE_TEAM_ID'],
-          code_sign_identity: "",
-          targets: ["CbM_mobile_app"],
-          build_configurations: ["Release"]
-        )
+        # Note: update_code_signing_settings is not needed when using automatic signing
+        # Xcode will handle code signing automatically with the team ID
+        UI.message("Automatic code signing will be handled by Xcode with Team ID: #{ENV['APPLE_TEAM_ID']}")
       else
         UI.user_error!("APPLE_TEAM_ID not set - please define it in GitHub Secrets")
       end
