@@ -549,7 +549,38 @@ jobs:
         run: ./.github/scripts/post-prebuild.sh
 
       # ======================================================================
-      # Step 8: Install Fastlane Dependencies
+      # Step 8: Verify Fastlane Files and Copy AAB
+      # Ensures Fastlane configuration exists and AAB is in correct location
+      # ======================================================================
+      - name: Verify Fastlane files and copy AAB
+        run: |
+          echo "Verifying Fastlane configuration..."
+          if [ ! -d "android/fastlane" ]; then
+            echo "ERROR: android/fastlane directory not found!"
+            exit 1
+          fi
+          if [ ! -f "android/fastlane/Fastfile" ]; then
+            echo "ERROR: android/fastlane/Fastfile not found!"
+            exit 1
+          fi
+          echo "✅ Fastlane configuration verified"
+          
+          echo "Creating output directories..."
+          mkdir -p android/app/build/outputs/bundle/release
+          mkdir -p android/app/build/outputs/apk/release
+          
+          echo "Copying AAB to expected location..."
+          cp android-artifacts/bundle/release/*.aab android/app/build/outputs/bundle/release/app-release.aab
+          
+          echo "Copying APK to expected location..."
+          cp android-artifacts/apk/release/*.apk android/app/build/outputs/apk/release/ || echo "No APK found, skipping..."
+          
+          echo "✅ Artifacts copied successfully"
+          ls -la android/app/build/outputs/bundle/release/
+          ls -la android/app/build/outputs/apk/release/
+
+      # ======================================================================
+      # Step 9: Install Fastlane Dependencies
       # Installs Ruby gems needed for deployment
       # ======================================================================
       - name: Install Fastlane dependencies
@@ -559,7 +590,7 @@ jobs:
           bundle install
 
       # ======================================================================
-      # Step 9: Deploy Android to Internal Track
+      # Step 10: Deploy Android to Internal Track
       # Uploads AAB to Google Play Internal Testing track
       # Uses service account credentials for authentication
       # ======================================================================
@@ -670,7 +701,38 @@ jobs:
         run: ./.github/scripts/post-prebuild.sh
 
       # ======================================================================
-      # Step 8: Install Fastlane Dependencies
+      # Step 8: Verify Fastlane Files and Copy AAB
+      # Ensures Fastlane configuration exists and AAB is in correct location
+      # ======================================================================
+      - name: Verify Fastlane files and copy AAB
+        run: |
+          echo "Verifying Fastlane configuration..."
+          if [ ! -d "android/fastlane" ]; then
+            echo "ERROR: android/fastlane directory not found!"
+            exit 1
+          fi
+          if [ ! -f "android/fastlane/Fastfile" ]; then
+            echo "ERROR: android/fastlane/Fastfile not found!"
+            exit 1
+          fi
+          echo "✅ Fastlane configuration verified"
+          
+          echo "Creating output directories..."
+          mkdir -p android/app/build/outputs/bundle/release
+          mkdir -p android/app/build/outputs/apk/release
+          
+          echo "Copying AAB to expected location..."
+          cp android-artifacts/bundle/release/*.aab android/app/build/outputs/bundle/release/app-release.aab
+          
+          echo "Copying APK to expected location..."
+          cp android-artifacts/apk/release/*.apk android/app/build/outputs/apk/release/ || echo "No APK found, skipping..."
+          
+          echo "✅ Artifacts copied successfully"
+          ls -la android/app/build/outputs/bundle/release/
+          ls -la android/app/build/outputs/apk/release/
+
+      # ======================================================================
+      # Step 9: Install Fastlane Dependencies
       # Installs Ruby gems needed for deployment
       # ======================================================================
       - name: Install Fastlane dependencies
@@ -680,7 +742,7 @@ jobs:
           bundle install
 
       # ======================================================================
-      # Step 9: Download iOS Artifacts
+      # Step 10: Download iOS Artifacts
       # ======================================================================
       - name: Download iOS Artifacts
         uses: actions/download-artifact@v4
@@ -689,7 +751,7 @@ jobs:
           path: ios-artifacts
 
       # ======================================================================
-      # Step 10: Deploy Android to Beta Track
+      # Step 11: Deploy Android to Beta Track
       # Uploads AAB to Google Play Beta track for QA testing
       # ======================================================================
       - name: Deploy Android (QA)
@@ -699,7 +761,7 @@ jobs:
         run: bundle exec fastlane deploy_beta
 
       # ======================================================================
-      # Step 11: Install iOS Fastlane Dependencies
+      # Step 12: Install iOS Fastlane Dependencies
       # ======================================================================
       - name: Install iOS Fastlane dependencies
         working-directory: ios
@@ -708,7 +770,7 @@ jobs:
           bundle install
 
       # ======================================================================
-      # Step 12: Deploy iOS to TestFlight (QA)
+      # Step 13: Deploy iOS to TestFlight (QA)
       # Uploads IPA to TestFlight for QA team testing
       # ======================================================================
       - name: Deploy iOS to TestFlight (QA)
@@ -791,7 +853,38 @@ jobs:
         run: ./.github/scripts/post-prebuild.sh
 
       # ======================================================================
-      # Step 8: Install Fastlane Dependencies
+      # Step 8: Verify Fastlane Files and Copy AAB
+      # Ensures Fastlane configuration exists and AAB is in correct location
+      # ======================================================================
+      - name: Verify Fastlane files and copy AAB
+        run: |
+          echo "Verifying Fastlane configuration..."
+          if [ ! -d "android/fastlane" ]; then
+            echo "ERROR: android/fastlane directory not found!"
+            exit 1
+          fi
+          if [ ! -f "android/fastlane/Fastfile" ]; then
+            echo "ERROR: android/fastlane/Fastfile not found!"
+            exit 1
+          fi
+          echo "✅ Fastlane configuration verified"
+          
+          echo "Creating output directories..."
+          mkdir -p android/app/build/outputs/bundle/release
+          mkdir -p android/app/build/outputs/apk/release
+          
+          echo "Copying AAB to expected location..."
+          cp android-artifacts/bundle/release/*.aab android/app/build/outputs/bundle/release/app-release.aab
+          
+          echo "Copying APK to expected location..."
+          cp android-artifacts/apk/release/*.apk android/app/build/outputs/apk/release/ || echo "No APK found, skipping..."
+          
+          echo "✅ Artifacts copied successfully"
+          ls -la android/app/build/outputs/bundle/release/
+          ls -la android/app/build/outputs/apk/release/
+
+      # ======================================================================
+      # Step 9: Install Fastlane Dependencies
       # Installs Ruby gems needed for deployment
       # ======================================================================
       - name: Install Fastlane dependencies
@@ -801,7 +894,7 @@ jobs:
           bundle install
 
       # ======================================================================
-      # Step 9: Download iOS Artifacts
+      # Step 10: Download iOS Artifacts
       # ======================================================================
       - name: Download iOS Artifacts
         uses: actions/download-artifact@v4
@@ -810,7 +903,7 @@ jobs:
           path: ios-artifacts
 
       # ======================================================================
-      # Step 10: Deploy Android to Production
+      # Step 11: Deploy Android to Production
       # Uploads AAB to Google Play Production track for public release
       # ======================================================================
       - name: Deploy Android to Production
@@ -820,7 +913,7 @@ jobs:
         run: bundle exec fastlane deploy_production
 
       # ======================================================================
-      # Step 11: Install iOS Fastlane Dependencies
+      # Step 12: Install iOS Fastlane Dependencies
       # ======================================================================
       - name: Install iOS Fastlane dependencies
         working-directory: ios
@@ -829,7 +922,7 @@ jobs:
           bundle install
 
       # ======================================================================
-      # Step 12: Upload iOS IPA to App Store
+      # Step 13: Upload iOS IPA to App Store
       # Uploads IPA to App Store for public release
       # ======================================================================
       - name: Upload iOS IPA to App Store
