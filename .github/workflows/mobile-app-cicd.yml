@@ -169,6 +169,22 @@ jobs:
           node-version: ${{ env.NODE_VERSION }}
 
       # ======================================================================
+      # Step 2.5: Cache Gradle Dependencies
+      # Caches Gradle wrapper, dependencies, and build cache
+      # This significantly reduces build time on subsequent runs
+      # ======================================================================
+      - name: Cache Gradle wrapper and dependencies
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.gradle/caches
+            ~/.gradle/wrapper
+            ~/.android/build-cache
+          key: gradle-${{ runner.os }}-${{ hashFiles('**/*.gradle*', '**/gradle-wrapper.properties') }}
+          restore-keys: |
+            gradle-${{ runner.os }}-
+
+      # ======================================================================
       # Step 3: Install JavaScript Dependencies
       # Uses --legacy-peer-deps to handle peer dependency conflicts
       # ======================================================================
@@ -435,11 +451,12 @@ jobs:
 
   # Development Environment Approval
   # Requires: Android build only (faster iteration for internal testing)
+
   approve_development:
     name: Manual Approval (Development)
     runs-on: ubuntu-latest
     needs: [build_android]
-    if: ${{ github.event_name == 'workflow_dispatch' && inputs.environment == 'development' }}
+    if: ${{ github.ref == 'refs/heads/develop' || github.ref == 'refs/heads/main' }}
     environment:
       name: development
     steps:

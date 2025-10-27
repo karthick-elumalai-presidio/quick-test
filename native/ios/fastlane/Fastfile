@@ -19,7 +19,7 @@ platform :ios do
   lane :build_ci do
     UI.message("Building iOS app for CI validation (no signing)...")
     gym(
-      workspace: "CbM_mobile_app.xcworkspace",
+      workspace: "ios/CbM_mobile_app.xcworkspace",
       scheme: "CbM_mobile_app",
       configuration: "Release",
       skip_package_ipa: true,
@@ -38,7 +38,7 @@ platform :ios do
   lane :build_debug do
     UI.message("Building Debug IPA with Automatic Code Signing...")
     build_app(
-      workspace: "CbM_mobile_app.xcworkspace",
+      workspace: "ios/CbM_mobile_app.xcworkspace",
       scheme: "CbM_mobile_app",
       configuration: "Debug",
       export_method: "development",
@@ -66,7 +66,7 @@ platform :ios do
       end
 
       build_app(
-        workspace: "CbM_mobile_app.xcworkspace",
+        workspace: "ios/CbM_mobile_app.xcworkspace",
         scheme: "CbM_mobile_app",
         configuration: "Release",
         export_method: "app-store",
