@@ -163,43 +163,6 @@ jobs:
           fi
           echo "------------"
 
-      # - name: Android Build Check
-      #   working-directory: android
-      #   env:
-      #     CI: true
-      #     FASTLANE_SKIP_UPDATE_CHECK: true
-      #   run: |
-      #     echo "------------"
-      #     echo "Running Android Build Check"
-      #     echo "----"
-      #     if [ -f "../native/android/fastlane/Fastfile" ]; then
-      #       echo "Using Fastlane for build check..."
-      #       cd ../native/android
-      #       if bundle exec fastlane build_debug; then
-      #         echo " Android build check passed (Fastlane)."
-      #       else
-      #         echo " Fastlane build failed, trying Gradle directly..."
-      #         cd ../../android
-      #         ./gradlew assembleDebug || (echo " Android build check failed." && exit 1)
-      #       fi
-      #     else
-      #       echo "No Fastlane configuration found, using Gradle directly..."
-      #       ./gradlew assembleDebug
-      #       if [ $? -eq 0 ]; then
-      #         echo " Android build check passed (Gradle)."
-      #       else
-      #         echo " Android build check failed."
-      #         exit 1
-      #       fi
-      #     fi
-      #     echo "------------"
-
-      # - name: iOS Build Check (Skipped)
-      #   run: |
-      #     echo "------------"
-      #     echo "iOS Build Check Skipped on Ubuntu Runners"
-      #     echo "------------"
-
       - name: Comment PR with Validation Results
         uses: actions/github-script@v7
         if: always()
