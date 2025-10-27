@@ -43,12 +43,26 @@ jobs:
           echo "PR Number: ${{ github.event.number }}"
           echo "------------"
 
+      - name: Cache npm dependencies
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.npm
+            node_modules
+          key: ${{ runner.os }}-node-${{ hashFiles('**/package-lock.json') }}
+          restore-keys: |
+            ${{ runner.os }}-node-
+
       - name: Install Dependencies
         run: |
           echo "------------"
           echo "Installing Dependencies"
           echo "----"
-          npm install
+          if [ -f package-lock.json ]; then
+            npm ci --legacy-peer-deps
+          else
+            npm install --legacy-peer-deps
+          fi
           echo "Dependencies installed successfully."
           echo "------------"
 
@@ -69,7 +83,7 @@ jobs:
 
           echo "----"
           echo "Running TypeScript type checks..."
-          if npx tsc --noEmit; then
+          if npm run type-check; then
             echo " TypeScript type checks passed"
           else
             echo " TypeScript type errors found"
@@ -107,6 +121,8 @@ jobs:
           if [ ! -f "android/gradlew" ]; then
             echo "Android project not found. Attempting to create..."
             npx expo prebuild --platform android --clean
+            echo "Restoring Fastlane files..."
+            ./.github/scripts/post-prebuild.sh
             if [ -f "android/gradlew" ]; then
               echo " Android project created successfully."
             else
@@ -115,6 +131,8 @@ jobs:
             fi
           else
             echo " Android native project verified."
+            echo "Running post-prebuild script..."
+            ./.github/scripts/post-prebuild.sh
           fi
           echo "------------"
 
@@ -128,22 +146,40 @@ jobs:
         uses: ruby/setup-ruby@v1
         with:
           ruby-version: '3.2'
-          bundler-cache: true
-          working-directory: './android'
+          bundler-cache: false
+
+      - name: Install Fastlane Dependencies
+        run: |
+          echo "------------"
+          echo "Installing Fastlane Dependencies"
+          echo "----"
+          if [ -f "native/android/Gemfile" ]; then
+            cd native/android
+            bundle config set --local frozen false
+            bundle install
+            echo " Fastlane dependencies installed."
+          else
+            echo " No Gemfile found in native/android, skipping..."
+          fi
+          echo "------------"
 
       - name: Android Build Check
         working-directory: android
+        env:
+          CI: true
+          FASTLANE_SKIP_UPDATE_CHECK: true
         run: |
           echo "------------"
           echo "Running Android Build Check"
           echo "----"
-          if [ -f "Gemfile" ]; then
-            echo "Installing Ruby dependencies..."
-            bundle install
+          if [ -f "../native/android/fastlane/Fastfile" ]; then
+            echo "Using Fastlane for build check..."
+            cd ../native/android
             if bundle exec fastlane build_debug; then
               echo " Android build check passed (Fastlane)."
             else
               echo " Fastlane build failed, trying Gradle directly..."
+              cd ../../android
               ./gradlew assembleDebug || (echo " Android build check failed." && exit 1)
             fi
           else
