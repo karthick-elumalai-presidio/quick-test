@@ -533,7 +533,7 @@ jobs:
         working-directory: android
         env:
           SUPPLY_JSON_KEY_DATA: ${{ secrets.GCP_SERVICE_ACCOUNT_PRIVATE_KEY }}
-        run: bundle exec fastlane deploy_beta
+        run: bundle exec fastlane deploy_internal
 
       # ======================================================================
       # Step 6: Download iOS Artifacts

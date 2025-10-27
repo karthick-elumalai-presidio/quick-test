@@ -53,7 +53,7 @@ platform :android do
   # 3️⃣  Upload to Google Play Internal Testing
   ##############################################
   desc "Deploy build to Google Play Internal Testing"
-  lane :deploy_beta do
+  lane :deploy_internal do
     UI.message("📦 Uploading to Google Play (Internal Testing)...")
 
     upload_to_play_store(
@@ -70,7 +70,27 @@ platform :android do
   end
 
   ##############################################
-  # 4️⃣  Upload to Google Play Production
+  # 4️⃣  Upload to Google Play Beta Testing (QA Team)
+  ##############################################
+  desc "Deploy build to Google Play Beta Testing for QA team"
+  lane :deploy_beta do
+    UI.message("🧪 Uploading to Google Play (Beta Testing - QA Team)...")
+
+    upload_to_play_store(
+      track: "beta",
+      aab: "app/build/outputs/bundle/release/app-release.aab",
+      skip_upload_metadata: true,
+      skip_upload_images: true,
+      skip_upload_screenshots: true,
+      json_key_data: ENV['SUPPLY_JSON_KEY_DATA'], # ← GitHub secret injected via CI
+      timeout: 300
+    )
+
+    UI.success("✅ Successfully uploaded to Beta Testing track for QA team.")
+  end
+
+  ##############################################
+  # 5️⃣  Upload to Google Play Production
   ##############################################
   desc "Deploy build to Google Play Production"
   lane :deploy_production do
