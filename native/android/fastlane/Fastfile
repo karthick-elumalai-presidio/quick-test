@@ -12,7 +12,6 @@ platform :android do
     UI.message("🧱 Building Debug APK...")
       gradle(
         task: "clean assembleDebug",
-        project_dir: "android",
         flags: "--parallel --max-workers=4 --build-cache",
       properties: {
         "org.gradle.jvmargs" => "-Xmx4g -XX:MaxMetaspaceSize=1024m -XX:+HeapDumpOnOutOfMemoryError",
@@ -32,7 +31,6 @@ platform :android do
     UI.message("🚀 Building Release (AAB + APK)...")
       gradle(
         task: "clean bundleRelease",
-        project_dir: "android",
         flags: "--parallel --max-workers=4 --build-cache",
       properties: {
         "org.gradle.jvmargs" => "-Xmx4g -XX:MaxMetaspaceSize=1024m -XX:+HeapDumpOnOutOfMemoryError",

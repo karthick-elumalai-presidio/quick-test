@@ -358,7 +358,7 @@ jobs:
           pod install
           echo "Verifying workspace file was created..."
           ls -la *.xcworkspace
-          if [ ! -f "CbM_mobile_app.xcworkspace/contents.xcworkspacedata" ]; then
+          if [ ! -f "CbMmobileapp.xcworkspace/contents.xcworkspacedata" ]; then
             echo "ERROR: Workspace file not created properly by CocoaPods!"
             exit 1
           fi
