@@ -89,22 +89,30 @@ jobs:
       # ======================================================================
       # Step 3: Cache npm Dependencies
       # Caches node_modules to speed up subsequent runs
-      # Cache key is based on bun.lock hash for accuracy
+      # Cache key is based on package-lock.json hash for accuracy
       # ======================================================================
       - name: Cache npm dependencies
         uses: actions/cache@v4
         with:
-          path: ~/.npm
-          key: ${{ runner.os }}-node-${{ hashFiles('**/bun.lock') }}
+          path: |
+            ~/.npm
+            node_modules
+          key: ${{ runner.os }}-node-${{ hashFiles('**/package-lock.json') }}
           restore-keys: |
             ${{ runner.os }}-node-
 
       # ======================================================================
       # Step 4: Install Dependencies
-      # Uses 'npm install' to install dependencies from package.json
+      # Uses 'npm ci' for clean, reproducible installs in CI
+      # Falls back to 'npm install' if package-lock.json doesn't exist
       # ======================================================================
       - name: Install dependencies
-        run: npm install
+        run: |
+          if [ -f package-lock.json ]; then
+            npm ci --legacy-peer-deps
+          else
+            npm install --legacy-peer-deps
+          fi
 
       # ======================================================================
       # Step 5: Run ESLint and Prettier
@@ -162,9 +170,10 @@ jobs:
 
       # ======================================================================
       # Step 3: Install JavaScript Dependencies
+      # Uses --legacy-peer-deps to handle peer dependency conflicts
       # ======================================================================
       - name: Install JS dependencies
-        run: npm install
+        run: npm install --legacy-peer-deps
 
       # ======================================================================
       # Step 4: Verify or Create Android Project
@@ -292,9 +301,10 @@ jobs:
 
       # ======================================================================
       # Step 3: Install JavaScript Dependencies
+      # Uses --legacy-peer-deps to handle peer dependency conflicts
       # ======================================================================
       - name: Install JS dependencies
-        run: npm install
+        run: npm install --legacy-peer-deps
 
       # ======================================================================
       # Step 4: Verify or Create iOS Project
@@ -521,7 +531,7 @@ jobs:
       # Required for Expo prebuild to work
       # ======================================================================
       - name: Install JS dependencies
-        run: npm install
+        run: npm install --legacy-peer-deps
 
       # ======================================================================
       # Step 5: Create Android Project Structure
@@ -673,7 +683,7 @@ jobs:
       # Required for Expo prebuild to work
       # ======================================================================
       - name: Install JS dependencies
-        run: npm install
+        run: npm install --legacy-peer-deps
 
       # ======================================================================
       # Step 5: Create Android Project Structure
@@ -825,7 +835,7 @@ jobs:
       # Required for Expo prebuild to work
       # ======================================================================
       - name: Install JS dependencies
-        run: npm install
+        run: npm install --legacy-peer-deps
 
       # ======================================================================
       # Step 5: Create Android Project Structure
