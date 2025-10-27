@@ -525,7 +525,17 @@ jobs:
         run: ./.github/scripts/post-prebuild.sh
 
       # ======================================================================
-      # Step 5: Deploy Android to Internal Track
+      # Step 5: Install Fastlane Dependencies
+      # Installs Ruby gems needed for deployment
+      # ======================================================================
+      - name: Install Fastlane dependencies
+        working-directory: android
+        run: |
+          bundle config set --local frozen false
+          bundle install
+
+      # ======================================================================
+      # Step 6: Deploy Android to Internal Track
       # Uploads AAB to Google Play Internal Testing track
       # Uses service account credentials for authentication
       # ======================================================================
@@ -536,7 +546,7 @@ jobs:
         run: bundle exec fastlane deploy_internal
 
       # ======================================================================
-      # Step 6: Download iOS Artifacts
+      # Step 7: Download iOS Artifacts
       # Retrieves IPA file built in the build_ios job
       # ======================================================================
       - name: Download iOS Artifacts
@@ -546,7 +556,16 @@ jobs:
           path: ios-artifacts
 
       # ======================================================================
-      # Step 7: Upload iOS IPA to TestFlight
+      # Step 8: Install iOS Fastlane Dependencies
+      # ======================================================================
+      - name: Install iOS Fastlane dependencies
+        working-directory: ios
+        run: |
+          bundle config set --local frozen false
+          bundle install
+
+      # ======================================================================
+      # Step 9: Upload iOS IPA to TestFlight
       # Uploads IPA to TestFlight for internal beta testing
       # Uses App Store Connect API key for authentication
       # ======================================================================
@@ -601,7 +620,24 @@ jobs:
         run: ./.github/scripts/post-prebuild.sh
 
       # ======================================================================
-      # Step 5: Deploy Android to Beta Track
+      # Step 5: Setup Ruby
+      # ======================================================================
+      - name: Setup Ruby
+        uses: ruby/setup-ruby@v1
+        with:
+          ruby-version: '3.2'
+
+      # ======================================================================
+      # Step 6: Install Fastlane Dependencies
+      # ======================================================================
+      - name: Install Fastlane dependencies
+        working-directory: android
+        run: |
+          bundle config set --local frozen false
+          bundle install
+
+      # ======================================================================
+      # Step 7: Deploy Android to Beta Track
       # Uploads AAB to Google Play Beta track for QA testing
       # ======================================================================
       - name: Deploy Android (QA)
@@ -611,7 +647,16 @@ jobs:
         run: bundle exec fastlane deploy_beta
 
       # ======================================================================
-      # Step 6: Deploy iOS to TestFlight (QA)
+      # Step 8: Install iOS Fastlane Dependencies
+      # ======================================================================
+      - name: Install iOS Fastlane dependencies
+        working-directory: ios
+        run: |
+          bundle config set --local frozen false
+          bundle install
+
+      # ======================================================================
+      # Step 9: Deploy iOS to TestFlight (QA)
       # Uploads IPA to TestFlight for QA team testing
       # ======================================================================
       - name: Deploy iOS to TestFlight (QA)
@@ -668,7 +713,24 @@ jobs:
         run: ./.github/scripts/post-prebuild.sh
 
       # ======================================================================
-      # Step 5: Deploy Android to Production
+      # Step 5: Setup Ruby
+      # ======================================================================
+      - name: Setup Ruby
+        uses: ruby/setup-ruby@v1
+        with:
+          ruby-version: '3.2'
+
+      # ======================================================================
+      # Step 6: Install Fastlane Dependencies
+      # ======================================================================
+      - name: Install Fastlane dependencies
+        working-directory: android
+        run: |
+          bundle config set --local frozen false
+          bundle install
+
+      # ======================================================================
+      # Step 7: Deploy Android to Production
       # Uploads AAB to Google Play Production track for public release
       # ======================================================================
       - name: Deploy Android to Production
@@ -678,7 +740,16 @@ jobs:
         run: bundle exec fastlane deploy_production
 
       # ======================================================================
-      # Step 6: Upload iOS IPA to App Store
+      # Step 8: Install iOS Fastlane Dependencies
+      # ======================================================================
+      - name: Install iOS Fastlane dependencies
+        working-directory: ios
+        run: |
+          bundle config set --local frozen false
+          bundle install
+
+      # ======================================================================
+      # Step 9: Upload iOS IPA to App Store
       # Uploads IPA to App Store for public release
       # ======================================================================
       - name: Upload iOS IPA to App Store

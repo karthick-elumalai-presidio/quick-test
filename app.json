@@ -26,7 +26,7 @@
     "assetBundlePatterns": ["**/*"],
     "ios": {
       "supportsTablet": true,
-      "bundleIdentifier": "com.tdksensei.edgerx",
+      "bundleIdentifier": "com.tdksensei.cbm",
       "icon": "./assets/tdk-ios-icon.png"
     },
     "android": {
@@ -34,7 +34,7 @@
         "foregroundImage": "./assets/tdk-android-foreground.png",
         "backgroundColor": "#ffffff"
       },
-      "package": "com.tdksensei.edgerx"
+      "package": "com.tdksensei.cbm"
     }
   }
 }
