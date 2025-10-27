@@ -205,8 +205,7 @@ jobs:
                             -  Code quality checks (ESLint, Prettier)
                             -  TypeScript type checking
                             -  Unit tests (optional - add test framework)
-                            -  Android build validation
-                            -  iOS build validation (skipped on Ubuntu)
+                            -  Android native project verification
 
                             ------------
                             ### Next Steps
