@@ -621,7 +621,21 @@ jobs:
           path: ios-artifacts
 
       # ======================================================================
-      # Step 11: Install iOS Fastlane Dependencies
+      # Step 11: Create iOS Project Structure
+      # Recreates the ios/ directory structure needed by Fastlane
+      # ======================================================================
+      - name: Create iOS project structure
+        run: npx expo prebuild --platform ios --clean
+
+      # ======================================================================
+      # Step 12: Restore iOS Fastlane Files
+      # Ensures Fastlane configuration is in place
+      # ======================================================================
+      - name: Restore iOS Fastlane files
+        run: ./.github/scripts/post-prebuild.sh
+
+      # ======================================================================
+      # Step 13: Install iOS Fastlane Dependencies
       # ======================================================================
       - name: Install iOS Fastlane dependencies
         working-directory: ios
@@ -630,7 +644,7 @@ jobs:
           bundle install
 
       # ======================================================================
-      # Step 12: Upload iOS IPA to TestFlight
+      # Step 14: Upload iOS IPA to TestFlight
       # Uploads IPA to TestFlight for internal beta testing
       # Uses App Store Connect API key for authentication
       # ======================================================================
@@ -771,7 +785,21 @@ jobs:
         run: bundle exec fastlane deploy_beta
 
       # ======================================================================
-      # Step 12: Install iOS Fastlane Dependencies
+      # Step 12: Create iOS Project Structure
+      # Recreates the ios/ directory structure needed by Fastlane
+      # ======================================================================
+      - name: Create iOS project structure
+        run: npx expo prebuild --platform ios --clean
+
+      # ======================================================================
+      # Step 13: Restore iOS Fastlane Files
+      # Ensures Fastlane configuration is in place
+      # ======================================================================
+      - name: Restore iOS Fastlane files
+        run: ./.github/scripts/post-prebuild.sh
+
+      # ======================================================================
+      # Step 14: Install iOS Fastlane Dependencies
       # ======================================================================
       - name: Install iOS Fastlane dependencies
         working-directory: ios
@@ -780,7 +808,7 @@ jobs:
           bundle install
 
       # ======================================================================
-      # Step 13: Deploy iOS to TestFlight (QA)
+      # Step 15: Deploy iOS to TestFlight (QA)
       # Uploads IPA to TestFlight for QA team testing
       # ======================================================================
       - name: Deploy iOS to TestFlight (QA)
@@ -923,7 +951,21 @@ jobs:
         run: bundle exec fastlane deploy_production
 
       # ======================================================================
-      # Step 12: Install iOS Fastlane Dependencies
+      # Step 12: Create iOS Project Structure
+      # Recreates the ios/ directory structure needed by Fastlane
+      # ======================================================================
+      - name: Create iOS project structure
+        run: npx expo prebuild --platform ios --clean
+
+      # ======================================================================
+      # Step 13: Restore iOS Fastlane Files
+      # Ensures Fastlane configuration is in place
+      # ======================================================================
+      - name: Restore iOS Fastlane files
+        run: ./.github/scripts/post-prebuild.sh
+
+      # ======================================================================
+      # Step 14: Install iOS Fastlane Dependencies
       # ======================================================================
       - name: Install iOS Fastlane dependencies
         working-directory: ios
@@ -932,7 +974,7 @@ jobs:
           bundle install
 
       # ======================================================================
-      # Step 13: Upload iOS IPA to App Store
+      # Step 15: Upload iOS IPA to App Store
       # Uploads IPA to App Store for public release
       # ======================================================================
       - name: Upload iOS IPA to App Store
