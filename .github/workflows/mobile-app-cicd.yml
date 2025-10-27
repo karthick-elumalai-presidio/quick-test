@@ -226,6 +226,16 @@ jobs:
           java-version: '17'
 
       # ======================================================================
+      # Step 5.5: Install Android NDK
+      # Installs the specific NDK version required by React Native
+      # ======================================================================
+      - name: Install Android NDK
+        run: |
+          echo "Installing Android NDK 27.0.12077973..."
+          echo "y" | $ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager --install "ndk;27.0.12077973"
+          echo "NDK installed successfully"
+
+      # ======================================================================
       # Step 6: Setup Ruby
       # Installs Ruby 3.2 for running Fastlane automation
       # bundler-cache: false to allow manual bundle install with custom config
